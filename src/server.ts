@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import { runAgent } from "./core/agent";
 import { ChatMessage } from "./core/types";
+import { ZaloService } from "./services/zalo";
 
 // Load configurations from .env
 dotenv.config();
@@ -11,6 +12,10 @@ const port = process.env.GREENNODE_AGENT_IDENTITY ? 8080 : (process.env.PORT || 
 
 // Use Express JSON middleware to parse incoming request bodies
 app.use(express.json());
+
+// Initialize Zalo Bot if configured
+const zaloService = new ZaloService();
+zaloService.init(app);
 
 const agentName = process.env.AGENT_NAME || "JarvisTS";
 const defaultSystemPrompt = `You are ${agentName}, a smart AI assistant built using TypeScript and @anthropic-ai/sdk.`;
