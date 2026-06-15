@@ -69,7 +69,7 @@ export class CommandLineInterface {
         const nextHistory = [...history, { role: "user", content: trimmedInput } as any];
 
         // Call agent runner
-        const { text, newMessages } = await runAgent(nextHistory);
+        const { text, newMessages } = await runAgent(nextHistory, this.sessionId);
         console.log(`🤖 ${this.agentName}: ${text}`);
 
         // Save session history

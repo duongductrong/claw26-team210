@@ -32,12 +32,12 @@ export class AgentController {
     }
 
     try {
-      const sessionId = "global"; // Default global API session ID
+      const sessionId = (req.body.sessionId || req.headers["x-session-id"] || "global") as string;
       const history = this.sessionManager.getSession(sessionId);
       
       const nextHistory = [...history, { role: "user", content: message.trim() } as any];
       
-      const { text, newMessages } = await runAgent(nextHistory);
+      const { text, newMessages } = await runAgent(nextHistory, sessionId);
       
       this.sessionManager.updateSession(sessionId, [...nextHistory, ...newMessages]);
 
@@ -59,7 +59,7 @@ export class AgentController {
    * Retrieve Current Chat History
    */
   public getHistory = (req: Request, res: Response): void => {
-    const sessionId = "global";
+    const sessionId = (req.query.sessionId || req.headers["x-session-id"] || "global") as string;
     res.json({
       agent: this.agentName,
       history: this.sessionManager.getSession(sessionId)
@@ -70,7 +70,7 @@ export class AgentController {
    * Reset Agent Conversation Memory
    */
   public clearMemory = (req: Request, res: Response): void => {
-    const sessionId = "global";
+    const sessionId = (req.body.sessionId || req.headers["x-session-id"] || "global") as string;
     this.sessionManager.clearSession(sessionId);
     res.json({
       success: true,

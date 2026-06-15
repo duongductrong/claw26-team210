@@ -2,13 +2,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ChatMessage } from "./types";
 import { getAgentClient, transformToSDKMessages } from "./client";
 import { SkillsRegistry } from "./registry";
+import { SessionManager } from "./session";
 
 /**
  * Runs the Agent Loop: receives message history, calls the model, executes tools if requested,
  * and returns the final response text and new assistant messages.
  */
 export async function runAgent(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  sessionId?: string
 ): Promise<{ text: string; newMessages: ChatMessage[] }> {
   const client = getAgentClient();
   const { system, sdkMessages } = transformToSDKMessages(messages);
@@ -16,7 +18,19 @@ export async function runAgent(
   const registry = SkillsRegistry.getInstance();
   const activeTools = registry.getActiveTools();
   const additions = registry.getSystemPromptAdditions();
-  const combinedSystem = (system || "") + (additions ? "\n\n" + additions : "");
+  
+  let userAddition = "";
+  let securityAddition = "";
+  if (sessionId) {
+    const verifiedUser = SessionManager.getInstance().getVerifiedUser(sessionId);
+    if (verifiedUser) {
+      userAddition = `\n\n[AUTHENTICATED USER INFO]\nYou are interacting with verified user: ${verifiedUser.name} (ID: ${verifiedUser.id}).\nDepartment: ${verifiedUser.department}\nRole: ${verifiedUser.role}\nAccess Level: ${verifiedUser.accessLevel}\nDo not ask them to authenticate again. Use their name and respect their access level.`;
+    } else {
+      securityAddition = `\n\n[SECURITY REQUIREMENT - USER IDENTITY VERIFICATION]\nBefore assisting the user with any corporate data queries (such as Confluence searches, reading pages, or Jira tracking), you MUST verify the user's identity.\n- If you do not have the user's verified identity, you MUST greet the user and ask for their Full Name and Employee ID (mã nhân viên) in Vietnamese.\n- Once they provide their details, immediately call the 'verifyEmployee' tool to verify them against the directory (Page ID: 131319). Do not try to look up or answer questions using corporate data before they are successfully verified.`;
+    }
+  }
+
+  const combinedSystem = (system || "") + (additions ? "\n\n" + additions : "") + userAddition + securityAddition;
 
   let currentMessages = [...sdkMessages];
   let finalResponseText = "";
@@ -74,7 +88,7 @@ export async function runAgent(
       }
 
       try {
-        const result = await tool.execute(toolCall.input);
+        const result = await tool.execute(toolCall.input, { sessionId });
         toolResultsContent.push({
           type: "tool_result",
           tool_use_id: toolCall.id,

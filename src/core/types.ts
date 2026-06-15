@@ -14,7 +14,7 @@ export interface ToolDefinition {
     properties: Record<string, any>;
     required?: string[];
   };
-  execute: (input: any) => Promise<any>;
+  execute: (input: any, context?: { sessionId?: string }) => Promise<any>;
 }
 
 export interface Skill {

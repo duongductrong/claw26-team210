@@ -73,7 +73,7 @@ export class ZaloService {
         await this.bot?.sendChatAction(chatId, "typing");
 
         // 4. Run Agent loop
-        const { text: replyText, newMessages } = await runAgent(nextHistory);
+        const { text: replyText, newMessages } = await runAgent(nextHistory, chatId);
 
         // 5. Reply to user on Zalo
         const formattedReply = formatMarkdownToPlainText(replyText);

@@ -7,6 +7,8 @@ import { initSkills } from "./skills";
 import { SkillsRegistry } from "./core/registry";
 import { ArtifactsManager } from "./core/artifacts";
 import { SessionManager } from "./core/session";
+import { verifyEmployee, confluenceGetPage } from "./skills/atlassian/index";
+import { saveUserPreference, getUserPreferences } from "./skills/memory/index";
 
 async function runTests() {
   console.log("1. Testing transformToSDKMessages...");
@@ -274,8 +276,8 @@ async function runTests() {
   // Reset and load default skills
   registry.clear();
   initSkills();
-  if (registry.getSkills().length !== 3) {
-    throw new Error(`Expected 3 default skills, got ${registry.getSkills().length}`);
+  if (registry.getSkills().length !== 4) {
+    throw new Error(`Expected 4 default skills, got ${registry.getSkills().length}`);
   }
 
   console.log("Success: SkillsRegistry operations validated!");
@@ -374,6 +376,139 @@ async function runTests() {
   }
 
   console.log("Success: SessionManager operations validated!");
+
+  console.log("10. Testing Employee Verification & Access Control...");
+  const sessionManagerTest = SessionManager.getInstance();
+  sessionManagerTest.clearAll();
+  const testSessionId = "test-verification-session";
+
+  // Mock fetch and environment variables for the test
+  const originalFetchTest = globalThis.fetch;
+  const originalDomainTest = process.env.ATLASSIAN_DOMAIN;
+  const originalEmailTest = process.env.ATLASSIAN_EMAIL;
+  const originalTokenTest = process.env.ATLASSIAN_API_TOKEN;
+
+  process.env.ATLASSIAN_DOMAIN = "mock-domain.atlassian.net";
+  process.env.ATLASSIAN_EMAIL = "mock@mock.com";
+  process.env.ATLASSIAN_API_TOKEN = "mock-token";
+
+  const mockTableHtml = `
+    <table>
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Full Name</th>
+          <th>Age</th>
+          <th>Department</th>
+          <th>Role</th>
+          <th>Access Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>EMP100</td>
+          <td>Duong Duc Trong</td>
+          <td>24</td>
+          <td>Product</td>
+          <td>Product Manager</td>
+          <td>Admin</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  globalThis.fetch = (async (url: string) => {
+    if (url.includes("/wiki/rest/api/content/131319")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          body: {
+            storage: {
+              value: mockTableHtml,
+              representation: "storage"
+            }
+          }
+        })
+      } as Response;
+    }
+    // Fallback for other calls
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({})
+    } as Response;
+  }) as any;
+
+  try {
+    // Verify that other tools throw Access Denied before verification
+    try {
+      await confluenceGetPage.execute({ pageId: "65805" }, { sessionId: testSessionId });
+      throw new Error("confluenceGetPage should have failed with Access Denied before verification");
+    } catch (error) {
+      if (!(error as Error).message.includes("Access Denied")) {
+        throw error;
+      }
+      console.log("Success: confluenceGetPage threw expected Access Denied");
+    }
+
+    // Run verifyEmployee with invalid employee
+    const failVerify = await verifyEmployee.execute({ name: "Unknown User", employeeId: "EMP999" }, { sessionId: testSessionId });
+    if (failVerify.success !== false) {
+      throw new Error("verifyEmployee should have failed for unknown user");
+    }
+    console.log("Success: verifyEmployee failed as expected for invalid user");
+
+    // Run verifyEmployee with valid employee (EMP100: Duong Duc Trong)
+    const successVerify = await verifyEmployee.execute({ name: "Duong Duc Trong", employeeId: "EMP100" }, { sessionId: testSessionId });
+    if (successVerify.success !== true) {
+      throw new Error(`verifyEmployee failed: ${successVerify.message}`);
+    }
+    console.log("Success: verifyEmployee succeeded for valid user Duong Duc Trong!");
+
+    // Verify that metadata is saved in session
+    const verifiedUser = sessionManagerTest.getVerifiedUser(testSessionId);
+    if (!verifiedUser || verifiedUser.id !== "EMP100") {
+      throw new Error("SessionManager did not save verified user correctly");
+    }
+    console.log("Success: SessionManager successfully tracks verified user EMP100");
+
+    // Verify that other tools work after verification
+    try {
+      await confluenceGetPage.execute({ pageId: "65805" }, { sessionId: testSessionId });
+      console.log("Success: confluenceGetPage bypassed Access Denied check after verification!");
+    } catch (error) {
+      if ((error as Error).message.includes("Access Denied")) {
+        throw error;
+      }
+      console.log("Success: confluenceGetPage bypassed Access Denied check after verification!");
+    }
+
+    console.log("11. Testing Memory Skill & Local Fallback...");
+    // Save preference
+    const saveRes = await saveUserPreference.execute({ fact: "Likes green tea" }, { sessionId: testSessionId });
+    if (saveRes.success !== true) {
+      throw new Error(`saveUserPreference failed: ${saveRes.message}`);
+    }
+    console.log("Success: saveUserPreference saved fact successfully!");
+
+    // Retrieve preferences
+    const getRes = await getUserPreferences.execute({ query: "green tea" }, { sessionId: testSessionId });
+    if (getRes.userId !== "EMP100" || !getRes.preferences.includes("Likes green tea")) {
+      throw new Error(`getUserPreferences failed to retrieve correct preferences. Got: ${JSON.stringify(getRes)}`);
+    }
+    console.log("Success: getUserPreferences retrieved correct preferences!");
+
+  } finally {
+    // Restore fetch and env variables
+    globalThis.fetch = originalFetchTest;
+    if (originalDomainTest !== undefined) process.env.ATLASSIAN_DOMAIN = originalDomainTest;
+    else delete process.env.ATLASSIAN_DOMAIN;
+    if (originalEmailTest !== undefined) process.env.ATLASSIAN_EMAIL = originalEmailTest;
+    else delete process.env.ATLASSIAN_EMAIL;
+    if (originalTokenTest !== undefined) process.env.ATLASSIAN_API_TOKEN = originalTokenTest;
+    else delete process.env.ATLASSIAN_API_TOKEN;
+  }
 
   console.log("\n✅ All functional programming unit tests passed successfully!");
 }
