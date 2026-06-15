@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "CLaw26-Team210 - Onboarding AI Agent",
   "type": "module",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "scripts": {
-    "start": "tsx index.ts",
-    "dev": "tsx watch index.ts",
-    "server": "tsx server.ts",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "server": "tsx src/server.ts",
     "test:types": "tsc --noEmit",
-    "test": "tsx scratch_test.ts"
+    "test": "tsx src/scratch_test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

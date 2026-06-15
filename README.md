@@ -1,14 +1,14 @@
-# 🤖 Basic AI Agent Template in TypeScript & Vercel AI SDK
+# 🤖 Basic AI Agent Template in TypeScript & @anthropic-ai/sdk
 
-This project is a minimalist AI Agent template written in **TypeScript** and **Vercel AI SDK**, integrated with the **VNG Cloud MaaS AI Platform** (`google/gemma-4-31b-it` model). It is designed to show the core concepts of agent development using a clean, functional programming style.
+This project is a minimalist AI Agent template written in **TypeScript** and **@anthropic-ai/sdk**, integrated with the **VNG Cloud MaaS AI Platform** (`qwen/qwen3-5-27b` model). It is designed to show the core concepts of agent development using a clean, functional programming style.
 
 ---
 
-## 🌟 Why Vercel AI SDK & TypeScript?
+## 🌟 Why @anthropic-ai/sdk & TypeScript?
 
-1. **Type Safety**: TypeScript ensures type-safe configurations for agent inputs, system messages, and tool parameter schemas (via **Zod**).
-2. **Declarative Tools**: Define tools naturally using Zod schemas and async execution functions.
-3. **Automatic Tool Loop**: The SDK automatically handles multi-step tool execution based on model decisions, removing boilerplate loop code.
+1. **Type Safety**: TypeScript ensures type-safe configurations for agent inputs, system messages, and tool parameters.
+2. **Declarative Tools**: Define tools naturally using structured JSON schemas and async execution functions.
+3. **Custom Tool Loop**: Clear and explicit multi-step tool execution loop, giving you full control over how model decisions are handled.
 4. **Functional Programming**: Decoupled, pure functions for model calling and message transforming, avoiding mutable class states.
 
 ---
@@ -25,9 +25,13 @@ This project is a minimalist AI Agent template written in **TypeScript** and **V
 
 ## 📁 Project Structure
 
-- [`agent.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/agent.ts): Pure functional core logic using Vercel AI SDK. Initializes custom VNG Cloud OpenAI provider.
-- [`index.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/index.ts): Interactive command-line (CLI) terminal interface.
-- [`server.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/server.ts): Express API server providing endpoints to integrate the agent.
+All source files are now organized under the `src/` directory to separate concerns:
+- [`src/core/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/core/): Core agent loop (`agent.ts`), initialization (`client.ts`), and interfaces (`types.ts`).
+- [`src/services/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/services/): External service integrations (`atlassian.ts` for Jira/Confluence REST APIs).
+- [`src/tools/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/): Tool definitions grouped by domain (`system.ts`, `jira.ts`, `confluence.ts`) and aggregated in `index.ts`.
+- [`src/index.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/index.ts): Interactive command-line (CLI) terminal interface.
+- [`src/server.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/server.ts): Express API server.
+- [`src/scratch_test.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/scratch_test.ts): Custom unit testing suite.
 - [`tsconfig.json`](file:///Users/duongductrong/Developer/zlp/claw26-team210/tsconfig.json): TypeScript compilation config.
 - [`package.json`](file:///Users/duongductrong/Developer/zlp/claw26-team210/package.json): Script configurations and dependencies.
 
@@ -74,21 +78,33 @@ npm test
 
 ## 💡 How to Add Custom Tools
 
-Add new tools to the `tools` property inside `runAgent()` in [`agent.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/agent.ts):
-
+1. Create your tool definition in a domain-specific file under [`src/tools/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/) (e.g., `src/tools/weather.ts`):
 ```typescript
-import { tool } from "ai";
-import { z } from "zod";
+import { ToolDefinition } from "../core/types";
 
-// Inside the tools object:
-getWeather: tool({
+export const getWeather: ToolDefinition = {
+  name: "getWeather",
   description: "Get the current weather conditions for a location.",
-  inputSchema: z.object({
-    location: z.string().describe("City name, e.g. Tokyo")
-  }),
+  input_schema: {
+    type: "object",
+    properties: {
+      location: { type: "string", description: "City name, e.g. Tokyo" }
+    },
+    required: ["location"]
+  },
   execute: async ({ location }) => {
     // Implement real API call or mock data return
     return { location, condition: "Sunny", temperature: "25°C" };
   }
-})
+};
+```
+
+2. Register the tool in [`src/tools/index.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/index.ts) by importing it and adding it to the `agentTools` array:
+```typescript
+import { getWeather } from "./weather";
+
+export const agentTools: ToolDefinition[] = [
+  // ... existing tools
+  getWeather
+];
 ```
