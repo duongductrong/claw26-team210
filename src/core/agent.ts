@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ChatMessage } from "./types";
 import { getAgentClient, transformToSDKMessages } from "./client";
-import { agentTools } from "../tools/index";
+import { SkillsRegistry } from "./registry";
 
 /**
  * Runs the Agent Loop: receives message history, calls the model, executes tools if requested,
@@ -13,6 +13,11 @@ export async function runAgent(
   const client = getAgentClient();
   const { system, sdkMessages } = transformToSDKMessages(messages);
 
+  const registry = SkillsRegistry.getInstance();
+  const activeTools = registry.getActiveTools();
+  const additions = registry.getSystemPromptAdditions();
+  const combinedSystem = (system || "") + (additions ? "\n\n" + additions : "");
+
   let currentMessages = [...sdkMessages];
   let finalResponseText = "";
   let steps = 0;
@@ -21,9 +26,9 @@ export async function runAgent(
   while (steps < maxSteps) {
     const response = await client.messages.create({
       model: "qwen/qwen3-5-27b",
-      system,
+      system: combinedSystem || undefined,
       messages: currentMessages,
-      tools: agentTools.map(t => ({
+      tools: activeTools.map(t => ({
         name: t.name,
         description: t.description,
         input_schema: t.input_schema
@@ -57,7 +62,7 @@ export async function runAgent(
     const toolResultsContent: Anthropic.ToolResultBlockParam[] = [];
 
     for (const toolCall of toolCalls) {
-      const tool = agentTools.find(t => t.name === toolCall.name);
+      const tool = activeTools.find(t => t.name === toolCall.name);
       if (!tool) {
         toolResultsContent.push({
           type: "tool_result",
@@ -104,3 +109,4 @@ export async function runAgent(
     ]
   };
 }
+

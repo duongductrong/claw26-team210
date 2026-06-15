@@ -16,3 +16,22 @@ export interface ToolDefinition {
   };
   execute: (input: any) => Promise<any>;
 }
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  systemPromptAdditions?: string;
+  tools: ToolDefinition[];
+}
+
+export interface Artifact {
+  id: string;
+  title: string;
+  type: "code" | "markdown" | "json" | "text" | string;
+  content: string;
+  path: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

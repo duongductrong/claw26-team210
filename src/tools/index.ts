@@ -1,7 +1,7 @@
 import { ToolDefinition } from "../core/types";
-import { confluenceCreatePage, confluenceGetPage } from "./confluence";
-import { jiraCreateIssue, jiraGetIssue } from "./jira";
-import { getSystemTime } from "./system";
+import { getSystemTime } from "../skills/system/index";
+import { jiraGetIssue, jiraCreateIssue, confluenceGetPage, confluenceCreatePage } from "../skills/atlassian/index";
+import { createOrUpdateArtifact, readArtifact, listArtifacts } from "../skills/artifacts/index";
 
 export const agentTools: ToolDefinition[] = [
   getSystemTime,
@@ -9,4 +9,7 @@ export const agentTools: ToolDefinition[] = [
   jiraCreateIssue,
   confluenceGetPage,
   confluenceCreatePage,
+  createOrUpdateArtifact,
+  readArtifact,
+  listArtifacts,
 ];

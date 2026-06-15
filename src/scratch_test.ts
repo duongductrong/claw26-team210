@@ -1,8 +1,12 @@
 import { getAgentClient, transformToSDKMessages } from "./core/client";
-import { ChatMessage } from "./core/types";
+import { ChatMessage, Skill } from "./core/types";
 import { callJiraCloudAPI, callConfluenceCloudAPI } from "./services/atlassian";
 import { formatMarkdownToPlainText } from "./utils/formatter";
 import { getEnv } from "./utils/env";
+import { initSkills } from "./skills";
+import { SkillsRegistry } from "./core/registry";
+import { ArtifactsManager } from "./core/artifacts";
+import { SessionManager } from "./core/session";
 
 async function runTests() {
   console.log("1. Testing transformToSDKMessages...");
@@ -216,6 +220,160 @@ async function runTests() {
     if (originalTestVar !== undefined) process.env.TEST_ENV_VAR_CLEAN = originalTestVar;
     else delete process.env.TEST_ENV_VAR_CLEAN;
   }
+
+  console.log("7. Testing SkillsRegistry...");
+  const registry = SkillsRegistry.getInstance();
+  // Clear registry to start clean for registry tests
+  registry.clear();
+
+  // Register a mock skill
+  const mockSkill: Skill = {
+    id: "mock-skill",
+    name: "Mock Skill",
+    description: "For testing purposes",
+    systemPromptAdditions: "Mock system instruction additions.",
+    tools: [
+      {
+        name: "mockTool",
+        description: "A mock tool",
+        input_schema: { type: "object", properties: {} },
+        execute: async () => ({ mock: "ok" })
+      }
+    ]
+  };
+
+  registry.register(mockSkill);
+
+  const activeSkills = registry.getActiveSkills();
+  if (activeSkills.length !== 1 || activeSkills[0].id !== "mock-skill") {
+    throw new Error("SkillsRegistry failed to register or activate skill");
+  }
+
+  const additions = registry.getSystemPromptAdditions();
+  if (additions !== "Mock system instruction additions.") {
+    throw new Error(`Expected prompt additions 'Mock system instruction additions.', got '${additions}'`);
+  }
+
+  const activeTools = registry.getActiveTools();
+  if (activeTools.length !== 1 || activeTools[0].name !== "mockTool") {
+    throw new Error("SkillsRegistry failed to retrieve active tools");
+  }
+
+  // Deactivate skill
+  registry.deactivate("mock-skill");
+  if (registry.getActiveTools().length !== 0) {
+    throw new Error("SkillsRegistry failed to deactivate skill");
+  }
+
+  // Activate skill again
+  registry.activate("mock-skill");
+  if (registry.getActiveTools().length !== 1) {
+    throw new Error("SkillsRegistry failed to re-activate skill");
+  }
+
+  // Reset and load default skills
+  registry.clear();
+  initSkills();
+  if (registry.getSkills().length !== 3) {
+    throw new Error(`Expected 3 default skills, got ${registry.getSkills().length}`);
+  }
+
+  console.log("Success: SkillsRegistry operations validated!");
+
+  console.log("8. Testing ArtifactsManager...");
+  // Backup env variable
+  const originalArtifactsDir = process.env.AGENT_ARTIFACTS_DIR;
+  // Use a temporary test directory
+  process.env.AGENT_ARTIFACTS_DIR = "./test-artifacts";
+
+  const artifactsManager = ArtifactsManager.getInstance();
+  
+  // Clean up any test leftovers if any
+  try {
+    await artifactsManager.deleteArtifact("test-doc.md");
+  } catch {}
+
+  // Save an artifact
+  const art = await artifactsManager.saveArtifact(
+    "Test Document",
+    "markdown",
+    "# Hello Test\nThis is a test artifact.",
+    "test-doc.md"
+  );
+
+  if (art.id !== "test-doc.md") {
+    throw new Error(`Expected artifact ID 'test-doc.md', got '${art.id}'`);
+  }
+  if (art.title !== "Test Document") {
+    throw new Error("Artifact title mismatch");
+  }
+
+  // Read artifact
+  const readContent = await artifactsManager.readArtifact("test-doc.md");
+  if (readContent !== "# Hello Test\nThis is a test artifact.") {
+    throw new Error(`Artifact read content mismatch: '${readContent}'`);
+  }
+
+  // List artifacts
+  const list = await artifactsManager.listArtifacts();
+  const found = list.find(a => a.id === "test-doc.md");
+  if (!found) {
+    throw new Error("Saved artifact not found in list");
+  }
+
+  // Delete artifact
+  const deleted = await artifactsManager.deleteArtifact("test-doc.md");
+  if (!deleted) {
+    throw new Error("Failed to delete artifact");
+  }
+
+  // Verify deletion
+  const listAfterDelete = await artifactsManager.listArtifacts();
+  if (listAfterDelete.some(a => a.id === "test-doc.md")) {
+    throw new Error("Artifact still exists after deletion");
+  }
+
+  // Clean up test directory
+  const fs = await import("fs/promises");
+  try {
+    await fs.rmdir("./test-artifacts");
+  } catch {}
+
+  // Restore env
+  if (originalArtifactsDir !== undefined) {
+    process.env.AGENT_ARTIFACTS_DIR = originalArtifactsDir;
+  } else {
+    delete process.env.AGENT_ARTIFACTS_DIR;
+  }
+
+  console.log("Success: ArtifactsManager operations validated!");
+
+  console.log("9. Testing SessionManager...");
+  const sessionManager = SessionManager.getInstance();
+  sessionManager.clearAll();
+
+  const session1 = sessionManager.getSession("session-1");
+  if (session1.length !== 1 || session1[0].role !== "system") {
+    throw new Error("SessionManager failed to initialize session history");
+  }
+
+  sessionManager.updateSession("session-1", [
+    ...session1,
+    { role: "user", content: "Hi" } as any
+  ]);
+
+  const updatedSession = sessionManager.getSession("session-1");
+  if (updatedSession.length !== 2 || updatedSession[1].content !== "Hi") {
+    throw new Error("SessionManager failed to update session history");
+  }
+
+  sessionManager.clearSession("session-1");
+  const clearedSession = sessionManager.getSession("session-1");
+  if (clearedSession.length !== 1 || clearedSession[0].role !== "system") {
+    throw new Error("SessionManager failed to clear session");
+  }
+
+  console.log("Success: SessionManager operations validated!");
 
   console.log("\n✅ All functional programming unit tests passed successfully!");
 }
