@@ -20,7 +20,7 @@ export class CommandLineInterface {
    * Starts the CLI interactive loop.
    */
   public start(): void {
-    const systemPrompt = getEnv("SYSTEM_PROMPT", `You are ${this.agentName}, a smart AI assistant.`);
+    const systemPrompt = this.sessionManager.getSystemPrompt();
 
     console.log(`====================================================`);
     console.log(`🤖 Welcome to ${this.agentName} (TypeScript CLI)!`);

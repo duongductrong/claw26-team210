@@ -359,6 +359,18 @@ async function runTests() {
     throw new Error("SessionManager failed to initialize session history");
   }
 
+  // Verify that the default system prompt contains the out-of-scope policy
+  const systemPromptContent = session1[0].content;
+  if (!systemPromptContent.includes("STRICT OUT-OF-SCOPE POLICY")) {
+    throw new Error("SessionManager default system prompt is missing 'STRICT OUT-OF-SCOPE POLICY'");
+  }
+  if (!systemPromptContent.includes("1 + 1 = mấy")) {
+    throw new Error("SessionManager default system prompt is missing example '1 + 1 = mấy'");
+  }
+  if (systemPromptContent.includes("TypeScript") || systemPromptContent.includes("Vercel AI SDK")) {
+    throw new Error("SessionManager default system prompt contains technical jargon (TypeScript or Vercel AI SDK)");
+  }
+
   sessionManager.updateSession("session-1", [
     ...session1,
     { role: "user", content: "Hi" } as any
