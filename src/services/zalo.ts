@@ -2,6 +2,7 @@ import ZaloBot, { ZaloMessage, ZaloUpdate } from "node-zalo-bot";
 import { Express } from "express";
 import { runAgent } from "../core/agent";
 import { ChatMessage } from "../core/types";
+import { formatMarkdownToPlainText } from "../utils/formatter";
 
 export class ZaloService {
   private bot: ZaloBot | null = null;
@@ -80,7 +81,8 @@ export class ZaloService {
         const { text: replyText, newMessages } = await runAgent(nextHistory);
 
         // 5. Reply to user on Zalo
-        await this.bot?.sendMessage(chatId, replyText);
+        const formattedReply = formatMarkdownToPlainText(replyText);
+        await this.bot?.sendMessage(chatId, formattedReply);
 
         // 6. Save updated history
         this.sessions.set(chatId, [...nextHistory, ...newMessages]);

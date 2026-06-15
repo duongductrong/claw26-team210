@@ -1,6 +1,7 @@
 import { getAgentClient, transformToSDKMessages } from "./core/client";
 import { ChatMessage } from "./core/types";
 import { callJiraCloudAPI, callConfluenceCloudAPI } from "./services/atlassian";
+import { formatMarkdownToPlainText } from "./utils/formatter";
 
 async function runTests() {
   console.log("1. Testing transformToSDKMessages...");
@@ -149,6 +150,17 @@ async function runTests() {
     if (originalToken !== undefined) process.env.ATLASSIAN_API_TOKEN = originalToken;
     else delete process.env.ATLASSIAN_API_TOKEN;
   }
+
+  console.log("5. Testing formatMarkdownToPlainText...");
+  const markdownText = `### Hello World\nThis is **bold** and *italic*.\n- Item 1\n- Item 2\n[Link](https://example.com)\n\`inline code\`\n\`\`\`ts\nconst x = 1;\n\`\`\``;
+  const expectedText = `Hello World:\nThis is bold and italic.\n• Item 1\n• Item 2\nLink (https://example.com)\ninline code\nconst x = 1;`;
+  const formattedText = formatMarkdownToPlainText(markdownText);
+  if (formattedText !== expectedText) {
+    console.error("Got:", JSON.stringify(formattedText));
+    console.error("Expected:", JSON.stringify(expectedText));
+    throw new Error("formatMarkdownToPlainText test failed");
+  }
+  console.log("Success: formatMarkdownToPlainText outputs correct plain text format!");
 
   console.log("\n✅ All functional programming unit tests passed successfully!");
 }
