@@ -3,12 +3,13 @@ import dotenv from "dotenv";
 import { runAgent } from "./core/agent";
 import { ChatMessage } from "./core/types";
 import { ZaloService } from "./services/zalo";
+import { getEnv } from "./utils/env";
 
 // Load configurations from .env
 dotenv.config();
 
 const app = express();
-const port = process.env.GREENNODE_AGENT_IDENTITY ? 8080 : (process.env.PORT || 3000);
+const port = getEnv("GREENNODE_AGENT_IDENTITY") ? 8080 : (Number(getEnv("PORT")) || 3000);
 
 // Use Express JSON middleware to parse incoming request bodies
 app.use(express.json());
@@ -17,9 +18,9 @@ app.use(express.json());
 const zaloService = new ZaloService();
 zaloService.init(app);
 
-const agentName = process.env.AGENT_NAME || "JarvisTS";
+const agentName = getEnv("AGENT_NAME", "JarvisTS");
 const defaultSystemPrompt = `You are ${agentName}, a smart AI assistant built using TypeScript and @anthropic-ai/sdk.`;
-const systemPrompt = process.env.SYSTEM_PROMPT || defaultSystemPrompt;
+const systemPrompt = getEnv("SYSTEM_PROMPT", defaultSystemPrompt);
 
 // Global conversation memory
 let memory: ChatMessage[] = [

@@ -1,9 +1,11 @@
+import { getEnv } from "../utils/env";
+
 /**
  * Encodes email and API token to Base64 for Basic Authentication.
  */
 function getAtlassianAuthHeader(): string {
-  const email = process.env.ATLASSIAN_EMAIL || "";
-  const token = process.env.ATLASSIAN_API_TOKEN || "";
+  const email = getEnv("ATLASSIAN_EMAIL");
+  const token = getEnv("ATLASSIAN_API_TOKEN");
   if (!email || !token) {
     return "";
   }
@@ -14,7 +16,7 @@ function getAtlassianAuthHeader(): string {
  * Helper to call Jira Cloud REST API v3
  */
 export async function callJiraCloudAPI(path: string, method = "GET", body: any = null): Promise<any> {
-  let domain = process.env.ATLASSIAN_DOMAIN || "";
+  let domain = getEnv("ATLASSIAN_DOMAIN");
   if (!domain) {
     throw new Error("ATLASSIAN_DOMAIN is not configured in environment variables.");
   }
@@ -50,7 +52,7 @@ export async function callJiraCloudAPI(path: string, method = "GET", body: any =
  * Helper to call Confluence Cloud REST API v1
  */
 export async function callConfluenceCloudAPI(path: string, method = "GET", body: any = null): Promise<any> {
-  let domain = process.env.ATLASSIAN_DOMAIN || "";
+  let domain = getEnv("ATLASSIAN_DOMAIN");
   if (!domain) {
     throw new Error("ATLASSIAN_DOMAIN is not configured in environment variables.");
   }

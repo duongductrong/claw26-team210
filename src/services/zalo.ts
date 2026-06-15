@@ -3,6 +3,7 @@ import { Express } from "express";
 import { runAgent } from "../core/agent";
 import { ChatMessage } from "../core/types";
 import { formatMarkdownToPlainText } from "../utils/formatter";
+import { getEnv } from "../utils/env";
 
 export class ZaloService {
   private bot: ZaloBot | null = null;
@@ -10,24 +11,25 @@ export class ZaloService {
   private systemPrompt: string;
 
   constructor() {
-    const agentName = process.env.AGENT_NAME || "JarvisTS";
+    const agentName = getEnv("AGENT_NAME", "JarvisTS");
     const defaultSystemPrompt = `You are ${agentName}, a smart AI assistant built using TypeScript and @anthropic-ai/sdk.`;
-    this.systemPrompt = process.env.SYSTEM_PROMPT || defaultSystemPrompt;
+    this.systemPrompt = getEnv("SYSTEM_PROMPT", defaultSystemPrompt);
   }
 
   /**
    * Initializes the Zalo bot. Can be set up to use Polling or Webhook.
    */
   public init(app?: Express): void {
-    const token = process.env.ZALO_BOT_TOKEN;
+    const token = getEnv("ZALO_BOT_TOKEN");
     if (!token) {
       console.warn("⚠️ ZALO_BOT_TOKEN is not configured. Zalo Bot will not start.");
       return;
     }
 
-    const usePolling = process.env.ZALO_BOT_POLLING === "true";
+    const isRunningOnPlatform = !!getEnv("GREENNODE_AGENT_IDENTITY");
+    const usePolling = isRunningOnPlatform ? false : (getEnv("ZALO_BOT_POLLING") === "true");
 
-    console.log(`🔌 Initializing Zalo Bot (Polling: ${usePolling})...`);
+    console.log(`🔌 Initializing Zalo Bot (Polling: ${usePolling}, Platform: ${isRunningOnPlatform})...`);
 
     this.bot = new ZaloBot(token, {
       polling: usePolling,
@@ -100,8 +102,8 @@ export class ZaloService {
    * Webhook route for receiving updates pushed from Zalo servers.
    */
   private setupWebhookRoute(app: Express): void {
-    const secretToken = process.env.ZALO_WEBHOOK_SECRET_TOKEN;
-    const webhookUrl = process.env.ZALO_WEBHOOK_URL;
+    const secretToken = getEnv("ZALO_WEBHOOK_SECRET_TOKEN");
+    const webhookUrl = getEnv("ZALO_WEBHOOK_URL");
 
     app.post("/webhook/zalo", (req, res) => {
       if (secretToken && req.headers["x-bot-api-secret-token"] !== secretToken) {

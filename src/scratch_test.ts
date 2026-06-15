@@ -2,6 +2,7 @@ import { getAgentClient, transformToSDKMessages } from "./core/client";
 import { ChatMessage } from "./core/types";
 import { callJiraCloudAPI, callConfluenceCloudAPI } from "./services/atlassian";
 import { formatMarkdownToPlainText } from "./utils/formatter";
+import { getEnv } from "./utils/env";
 
 async function runTests() {
   console.log("1. Testing transformToSDKMessages...");
@@ -161,6 +162,60 @@ async function runTests() {
     throw new Error("formatMarkdownToPlainText test failed");
   }
   console.log("Success: formatMarkdownToPlainText outputs correct plain text format!");
+
+  console.log("6. Testing getEnv helper cleaning functions...");
+  // Back up original process.env vars we will use for testing
+  const originalTestVar = process.env.TEST_ENV_VAR_CLEAN;
+
+  try {
+    // Test 6.1: Default value when undefined
+    delete process.env.TEST_ENV_VAR_CLEAN;
+    if (getEnv("TEST_ENV_VAR_CLEAN", "default_val") !== "default_val") {
+      throw new Error("getEnv failed to return default value for undefined var");
+    }
+
+    // Test 6.2: Clean value without quotes/comments
+    process.env.TEST_ENV_VAR_CLEAN = "simple_value";
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "simple_value") {
+      throw new Error("getEnv failed for simple value");
+    }
+
+    // Test 6.3: Double quotes stripping
+    process.env.TEST_ENV_VAR_CLEAN = '"quoted_value"';
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "quoted_value") {
+      throw new Error("getEnv failed to strip double quotes");
+    }
+
+    // Test 6.4: Single quotes stripping
+    process.env.TEST_ENV_VAR_CLEAN = "'single_quoted'";
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "single_quoted") {
+      throw new Error("getEnv failed to strip single quotes");
+    }
+
+    // Test 6.5: Comments stripping
+    process.env.TEST_ENV_VAR_CLEAN = "value_with_comment # this is a comment";
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "value_with_comment") {
+      throw new Error(`getEnv failed to strip comment, got: ${getEnv("TEST_ENV_VAR_CLEAN")}`);
+    }
+
+    // Test 6.6: Quotes AND comments stripping
+    process.env.TEST_ENV_VAR_CLEAN = '"quoted_with_comment" # comment here';
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "quoted_with_comment") {
+      throw new Error(`getEnv failed to strip quotes and comments, got: ${getEnv("TEST_ENV_VAR_CLEAN")}`);
+    }
+
+    // Test 6.7: Extra whitespace trimming
+    process.env.TEST_ENV_VAR_CLEAN = "   trimmed_value   ";
+    if (getEnv("TEST_ENV_VAR_CLEAN") !== "trimmed_value") {
+      throw new Error("getEnv failed to trim whitespace");
+    }
+
+    console.log("Success: getEnv correctly cleans and resolves environment variables!");
+  } finally {
+    // Restore
+    if (originalTestVar !== undefined) process.env.TEST_ENV_VAR_CLEAN = originalTestVar;
+    else delete process.env.TEST_ENV_VAR_CLEAN;
+  }
 
   console.log("\n✅ All functional programming unit tests passed successfully!");
 }

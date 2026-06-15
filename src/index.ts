@@ -2,13 +2,14 @@ import readline from "readline";
 import dotenv from "dotenv";
 import { runAgent } from "./core/agent";
 import { ChatMessage } from "./core/types";
+import { getEnv } from "./utils/env";
 
 // Load configurations from .env
 dotenv.config();
 
-const agentName = process.env.AGENT_NAME || "JarvisTS";
+const agentName = getEnv("AGENT_NAME", "JarvisTS");
 const defaultSystemPrompt = `You are ${agentName}, a smart AI assistant built using TypeScript and @anthropic-ai/sdk.`;
-const systemPrompt = process.env.SYSTEM_PROMPT || defaultSystemPrompt;
+const systemPrompt = getEnv("SYSTEM_PROMPT", defaultSystemPrompt);
 
 // Manage conversation state with a pure array (Functional state)
 let memory: ChatMessage[] = [{ role: "system", content: systemPrompt }];
