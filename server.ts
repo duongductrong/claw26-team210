@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
-import { runAgent, ChatMessage } from "./agent.js";
+import { runAgent, ChatMessage } from "./agent";
 
 // Load configurations from .env
 dotenv.config();

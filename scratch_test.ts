@@ -1,4 +1,4 @@
-import { getAgentClient, transformToSDKMessages, ChatMessage } from "./agent.js";
+import { getAgentClient, transformToSDKMessages, ChatMessage } from "./agent";
 
 async function runTests() {
   console.log("1. Testing transformToSDKMessages...");
