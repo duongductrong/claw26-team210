@@ -7,7 +7,7 @@ import { ChatMessage } from "./core/types";
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.GREENNODE_AGENT_IDENTITY ? 8080 : (process.env.PORT || 3000);
 
 // Use Express JSON middleware to parse incoming request bodies
 app.use(express.json());

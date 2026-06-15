@@ -1,0 +1,8 @@
+node_modules
+.env
+.env.*
+.greennode.json
+.git
+.agentbase
+plans
+.agentbase/
