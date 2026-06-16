@@ -168,6 +168,19 @@ export const jiraCreateIssue: ToolDefinition = {
   }
 };
 
+function verifyPageAccess(pageBody: string, user: any, pageTitle: string): void {
+  if (!user) {
+    return; // Allow bypass if no user context (e.g. testing)
+  }
+  const match = pageBody.match(/Quyền truy cập tài liệu:<\/strong>\s*([^<]+)/i);
+  if (match) {
+    const allowedIds = match[1].split(",").map(id => id.trim().toUpperCase());
+    if (!allowedIds.includes(user.id.toUpperCase())) {
+      throw new Error(`Access Denied: Tài khoản của bạn (${user.id}) không có quyền truy cập tài liệu này "${pageTitle}". Tài liệu này chỉ dành cho: ${allowedIds.join(", ")}.`);
+    }
+  }
+}
+
 export const confluenceGetPage: ToolDefinition = {
   name: "confluenceGetPage",
   description: "Get Confluence page details and HTML content by page ID.",
@@ -180,7 +193,83 @@ export const confluenceGetPage: ToolDefinition = {
   },
   execute: async ({ pageId }: { pageId: string }, context) => {
     checkVerification(context, ["Admin", "User"]);
-    return await callConfluenceCloudAPI(`/content/${pageId}?expand=body.storage,version,space`);
+    const pageData = await callConfluenceCloudAPI(`/content/${pageId}?expand=body.storage,version,space`);
+    const user = context?.sessionId ? SessionManager.getInstance().getVerifiedUser(context.sessionId) : null;
+    const bodyHtml = pageData?.body?.storage?.value || "";
+    const title = pageData?.title || "";
+    verifyPageAccess(bodyHtml, user, title);
+    return pageData;
+  }
+};
+
+export const confluenceSearchPages: ToolDefinition = {
+  name: "confluenceSearchPages",
+  description: "Search for Confluence pages by title or content keywords in the workspace.",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Keyword query to search pages (e.g., 'thiết bị', 'onboarding', 'kiến thức')" }
+    },
+    required: ["query"]
+  },
+  execute: async ({ query }: { query: string }, context) => {
+    checkVerification(context, ["Admin", "User"]);
+    const user = context?.sessionId ? SessionManager.getInstance().getVerifiedUser(context.sessionId) : null;
+    
+    const cql = `space='Claw26Team210' and (title ~ '${query}' or text ~ '${query}')`;
+    const searchUrl = `/content/search?cql=${encodeURIComponent(cql)}&expand=body.storage,version,space`;
+    const searchResult = await callConfluenceCloudAPI(searchUrl);
+    
+    const results: any[] = [];
+    if (searchResult.results && Array.isArray(searchResult.results)) {
+      for (const page of searchResult.results) {
+        const bodyHtml = page.body?.storage?.value || "";
+        const title = page.title || "";
+        try {
+          verifyPageAccess(bodyHtml, user, title);
+          results.push({
+            id: page.id,
+            title: page.title,
+            body: bodyHtml
+          });
+        } catch (err) {
+          // Filter out pages without access
+        }
+      }
+    }
+    return { query, results };
+  }
+};
+
+export const confluenceListPages: ToolDefinition = {
+  name: "confluenceListPages",
+  description: "List all available Confluence pages (titles and IDs) in the workspace.",
+  input_schema: {
+    type: "object",
+    properties: {}
+  },
+  execute: async (_, context) => {
+    checkVerification(context, ["Admin", "User"]);
+    const user = context?.sessionId ? SessionManager.getInstance().getVerifiedUser(context.sessionId) : null;
+    
+    const pageData = await callConfluenceCloudAPI(`/content?spaceKey=Claw26Team210&expand=body.storage,version`);
+    const results: any[] = [];
+    if (pageData.results && Array.isArray(pageData.results)) {
+      for (const page of pageData.results) {
+        const bodyHtml = page.body?.storage?.value || "";
+        const title = page.title || "";
+        try {
+          verifyPageAccess(bodyHtml, user, title);
+          results.push({
+            id: page.id,
+            title: page.title
+          });
+        } catch (err) {
+          // Filter out pages without access
+        }
+      }
+    }
+    return { results };
   }
 };
 
@@ -229,12 +318,16 @@ export const atlassianSkill: Skill = {
   systemPromptAdditions: `You are equipped with Atlassian tools.
 You MUST verify the user's identity first by calling verifyEmployee before using any other Atlassian tools.
 Use Jira tools (jiraGetIssue, jiraCreateIssue) for task, bug, and ticket tracking.
-Use Confluence tools (confluenceGetPage, confluenceCreatePage) for wiki documentation, pages, and structured knowledge management.`,
+Use Confluence tools (confluenceGetPage, confluenceSearchPages, confluenceListPages, confluenceCreatePage) for wiki documentation, pages, and structured knowledge management.
+Always use confluenceSearchPages or confluenceListPages to look up documentation details based on the user's questions instead of asking for page IDs or space keys.`,
   tools: [
     verifyEmployee,
     jiraGetIssue,
     jiraCreateIssue,
     confluenceGetPage,
+    confluenceSearchPages,
+    confluenceListPages,
     confluenceCreatePage
   ],
 };
+

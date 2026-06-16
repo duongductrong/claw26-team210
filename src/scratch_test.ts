@@ -1,13 +1,13 @@
 import { getAgentClient, transformToSDKMessages } from "./core/client";
 import { ChatMessage, Skill } from "./core/types";
 import { callJiraCloudAPI, callConfluenceCloudAPI } from "./services/atlassian";
-import { formatMarkdownToPlainText } from "./utils/formatter";
+import { formatMarkdownToPlainText, splitMessage } from "./utils/formatter";
 import { getEnv } from "./utils/env";
 import { initSkills } from "./skills";
 import { SkillsRegistry } from "./core/registry";
 import { ArtifactsManager } from "./core/artifacts";
 import { SessionManager } from "./core/session";
-import { verifyEmployee, confluenceGetPage } from "./skills/atlassian/index";
+import { verifyEmployee, confluenceGetPage, confluenceSearchPages, confluenceListPages } from "./skills/atlassian/index";
 import { saveUserPreference, getUserPreferences } from "./skills/memory/index";
 
 async function runTests() {
@@ -167,7 +167,36 @@ async function runTests() {
     console.error("Expected:", JSON.stringify(expectedText));
     throw new Error("formatMarkdownToPlainText test failed");
   }
-  console.log("Success: formatMarkdownToPlainText outputs correct plain text format!");
+
+  // 5.1 Test 2-column table
+  const twoColTable = `| Bộ phận | Mục đích |\n|---------|-----------|\n| HR | Lấy mã nhân viên, thông tin cá nhân |\n| IT | Hỗ trợ tài khoản, đăng nhập |\n| Onboarding | Hướng dẫn quy trình mới |`;
+  const expectedTwoCol = `• HR: Lấy mã nhân viên, thông tin cá nhân\n• IT: Hỗ trợ tài khoản, đăng nhập\n• Onboarding: Hướng dẫn quy trình mới`;
+  const formattedTwoCol = formatMarkdownToPlainText(twoColTable);
+  if (formattedTwoCol !== expectedTwoCol) {
+    console.error("Got two col:", JSON.stringify(formattedTwoCol));
+    console.error("Expected two col:", JSON.stringify(expectedTwoCol));
+    throw new Error("2-column table formatting test failed");
+  }
+
+  // 5.2 Test 3-column table (with STT id column)
+  const threeColTable = `| STT | Bộ phận | Người phụ trách |\n|---|---|---|\n| 1 | HR | Nguyễn Văn A |\n| 2 | IT | Trần Văn B |`;
+  const expectedThreeCol = `• 1. HR:\n  • Người phụ trách: Nguyễn Văn A\n\n• 2. IT:\n  • Người phụ trách: Trần Văn B`;
+  const formattedThreeCol = formatMarkdownToPlainText(threeColTable);
+  if (formattedThreeCol !== expectedThreeCol) {
+    console.error("Got three col:", JSON.stringify(formattedThreeCol));
+    console.error("Expected three col:", JSON.stringify(expectedThreeCol));
+    throw new Error("3-column table formatting test failed");
+  }
+
+  // 5.3 Test splitMessage
+  const longText = "a".repeat(100) + "\n" + "b".repeat(100) + "\n" + "c".repeat(100);
+  const chunks = splitMessage(longText, 120);
+  if (chunks.length !== 3 || chunks[0] !== "a".repeat(100) || chunks[1] !== "b".repeat(100) || chunks[2] !== "c".repeat(100)) {
+    console.error("Got chunks:", chunks);
+    throw new Error("splitMessage test failed");
+  }
+
+  console.log("Success: formatMarkdownToPlainText and splitMessage outputs correct formats!");
 
   console.log("6. Testing getEnv helper cleaning functions...");
   // Back up original process.env vars we will use for testing
@@ -444,6 +473,98 @@ async function runTests() {
         })
       } as Response;
     }
+    if (url.includes("/wiki/rest/api/content/131146")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "131146",
+          title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
+          body: {
+            storage: {
+              value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+              representation: "storage"
+            }
+          }
+        })
+      } as Response;
+    }
+    if (url.includes("/wiki/rest/api/content/131192")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "131192",
+          title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
+          body: {
+            storage: {
+              value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+              representation: "storage"
+            }
+          }
+        })
+      } as Response;
+    }
+    if (url.includes("/wiki/rest/api/content/search")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [
+            {
+              id: "131146",
+              title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
+              body: {
+                storage: {
+                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+                  representation: "storage"
+                }
+              }
+            },
+            {
+              id: "131192",
+              title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
+              body: {
+                storage: {
+                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+                  representation: "storage"
+                }
+              }
+            }
+          ]
+        })
+      } as Response;
+    }
+    if (url.includes("/wiki/rest/api/content?spaceKey=Claw26Team210")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [
+            {
+              id: "131146",
+              title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
+              body: {
+                storage: {
+                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+                  representation: "storage"
+                }
+              }
+            },
+            {
+              id: "131192",
+              title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
+              body: {
+                storage: {
+                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+                  representation: "storage"
+                }
+              }
+            }
+          ]
+        })
+      } as Response;
+    }
     // Fallback for other calls
     return {
       ok: true,
@@ -455,7 +576,7 @@ async function runTests() {
   try {
     // Verify that other tools throw Access Denied before verification
     try {
-      await confluenceGetPage.execute({ pageId: "65805" }, { sessionId: testSessionId });
+      await confluenceGetPage.execute({ pageId: "131146" }, { sessionId: testSessionId });
       throw new Error("confluenceGetPage should have failed with Access Denied before verification");
     } catch (error) {
       if (!(error as Error).message.includes("Access Denied")) {
@@ -487,14 +608,38 @@ async function runTests() {
 
     // Verify that other tools work after verification
     try {
-      await confluenceGetPage.execute({ pageId: "65805" }, { sessionId: testSessionId });
-      console.log("Success: confluenceGetPage bypassed Access Denied check after verification!");
+      const pageWithAccess = await confluenceGetPage.execute({ pageId: "131146" }, { sessionId: testSessionId });
+      if (pageWithAccess.title !== "💻 2. Tài khoản & Thiết bị (Accounts & Devices)") {
+        throw new Error("Failed to get authorized page details");
+      }
+      console.log("Success: confluenceGetPage allowed access for EMP100 to authorized page 131146");
     } catch (error) {
-      if ((error as Error).message.includes("Access Denied")) {
+      throw new Error(`confluenceGetPage should have succeeded for authorized page: ${(error as Error).message}`);
+    }
+
+    try {
+      await confluenceGetPage.execute({ pageId: "131192" }, { sessionId: testSessionId });
+      throw new Error("confluenceGetPage should have thrown Access Denied for unauthorized page 131192");
+    } catch (error) {
+      if (!(error as Error).message.includes("Access Denied")) {
         throw error;
       }
-      console.log("Success: confluenceGetPage bypassed Access Denied check after verification!");
+      console.log("Success: confluenceGetPage threw expected Access Denied for unauthorized page 131192");
     }
+
+    // Verify confluenceSearchPages
+    const searchRes = await confluenceSearchPages.execute({ query: "devices" }, { sessionId: testSessionId });
+    if (searchRes.results.length !== 1 || searchRes.results[0].id !== "131146") {
+      throw new Error(`confluenceSearchPages failed: expected only page 131146 in results, got ${JSON.stringify(searchRes.results)}`);
+    }
+    console.log("Success: confluenceSearchPages returned only authorized results and filtered out unauthorized ones!");
+
+    // Verify confluenceListPages
+    const listRes = await confluenceListPages.execute({}, { sessionId: testSessionId });
+    if (listRes.results.length !== 1 || listRes.results[0].id !== "131146") {
+      throw new Error(`confluenceListPages failed: expected only page 131146 in results, got ${JSON.stringify(listRes.results)}`);
+    }
+    console.log("Success: confluenceListPages returned only authorized results and filtered out unauthorized ones!");
 
     console.log("11. Testing Memory Skill & Local Fallback...");
     // Save preference

@@ -3,7 +3,7 @@ import { Express } from "express";
 import { runAgent } from "../core/agent";
 import { ChatMessage } from "../core/types";
 import { SessionManager } from "../core/session";
-import { formatMarkdownToPlainText } from "../utils/formatter";
+import { formatMarkdownToPlainText, splitMessage } from "../utils/formatter";
 import { getEnv } from "../utils/env";
 
 export class ZaloService {
@@ -75,9 +75,14 @@ export class ZaloService {
         // 4. Run Agent loop
         const { text: replyText, newMessages } = await runAgent(nextHistory, chatId);
 
-        // 5. Reply to user on Zalo
+        // 5. Reply to user on Zalo in chunks if it exceeds Zalo limit
         const formattedReply = formatMarkdownToPlainText(replyText);
-        await this.bot?.sendMessage(chatId, formattedReply);
+        const chunks = splitMessage(formattedReply);
+        for (const chunk of chunks) {
+          await this.bot?.sendMessage(chatId, chunk);
+          // Small delay to ensure correct order
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
 
         // 6. Save updated history
         this.sessionManager.updateSession(chatId, [...nextHistory, ...newMessages]);
