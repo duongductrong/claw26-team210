@@ -1,110 +1,125 @@
-# 🤖 Basic AI Agent Template in TypeScript & @anthropic-ai/sdk
+# 🤖 Smart AI Onboarding Assistant (TypeScript & AgentBase)
 
-This project is a minimalist AI Agent template written in **TypeScript** and **@anthropic-ai/sdk**, integrated with the **VNG Cloud MaaS AI Platform** (`qwen/qwen3-5-27b` model). It is designed to show the core concepts of agent development using a clean, functional programming style.
-
----
-
-## 🌟 Why @anthropic-ai/sdk & TypeScript?
-
-1. **Type Safety**: TypeScript ensures type-safe configurations for agent inputs, system messages, and tool parameters.
-2. **Declarative Tools**: Define tools naturally using structured JSON schemas and async execution functions.
-3. **Custom Tool Loop**: Clear and explicit multi-step tool execution loop, giving you full control over how model decisions are handled.
-4. **Functional Programming**: Decoupled, pure functions for model calling and message transforming, avoiding mutable class states.
+<div align="center">
+  <img src="assets/thumbnail.png" alt="AI Onboarding Assistant Banner" width="800"/>
+</div>
 
 ---
 
-## ⚙️ Core Implemented Concepts
+This repository houses the source code for a **Zero-Trust AI Onboarding Assistant** built in **TypeScript** using the `@anthropic-ai/sdk` and integrated with **Zalo Bot**. The agent is designed to streamline the corporate onboarding process for new hires by serving as a single point of interaction for internal wiki pages (Confluence), task tracking (Jira), and secure personnel directories.
 
-1. **System Prompt**: Defines the persona and behavior rules of the AI agent.
-2. **Functional State**: Plain arrays of `ChatMessage` representing chat history, passed immutably.
-3. **Tools**: Defined functions that the AI can choose to execute:
-   - `getSystemTime`: Retrieves the current system time.
-   - `getRandomNumber`: Generates a random integer in a given range.
+The agent is powered by the `qwen/qwen3-5-27b` model on the **VNG Cloud MaaS AI Platform** and optimized for production deployment on the **GreenNode AgentBase** platform.
 
 ---
 
-## 📁 Project Structure
+## 🌟 Core Features & Business Value
 
-All source files are now organized under the `src/` directory to separate concerns:
-- [`src/core/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/core/): Core agent loop (`agent.ts`), initialization (`client.ts`), and interfaces (`types.ts`).
-- [`src/services/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/services/): External service integrations (`atlassian.ts` for Jira/Confluence REST APIs).
-- [`src/tools/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/): Tool definitions grouped by domain (`system.ts`, `jira.ts`, `confluence.ts`) and aggregated in `index.ts`.
-- [`src/index.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/index.ts): Interactive command-line (CLI) terminal interface.
-- [`src/server.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/server.ts): Express API server.
-- [`src/scratch_test.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/scratch_test.ts): Custom unit testing suite.
-- [`tsconfig.json`](file:///Users/duongductrong/Developer/zlp/claw26-team210/tsconfig.json): TypeScript compilation config.
-- [`package.json`](file:///Users/duongductrong/Developer/zlp/claw26-team210/package.json): Script configurations and dependencies.
+1. **Zero-Trust Employee Verification**
+   - New users must verify their identity by providing their **Name** and **Employee ID** (`EMPxxx`) before retrieving any corporate info.
+   - Credentials are dynamically checked against the secure Employee Directory on Confluence.
+2. **Role-Based Access Control (RBAC)**
+   - Automatically handles user roles (Admin, User, Restricted).
+   - Enforces page-level permission checks (access denied is thrown and handled gracefully if a user tries to access a restricted Confluence page).
+3. **Seamless Jira & Confluence Integrations**
+   - Allows users to search, list, read, and create Confluence pages and Jira tickets.
+   - Operates using a natural query interface: users don't need to specify page IDs or space keys. The agent finds them automatically.
+4. **Zalo Bot & Messaging Channel Optimization**
+   - Automatically converts Markdown structures (including complex tables) into clean, plain-text formats readable in Zalo.
+   - Splits long responses to fit Zalo's message size limits seamlessly.
+5. **Strict Out-of-Scope Defense**
+   - Refuses out-of-scope prompts (e.g. general chit-chat, math equations, translation) and redirects users back to corporate onboarding tasks.
 
 ---
 
-## 🚀 Setup & Execution
+## 🏗️ Architecture Overview
 
-### 1. Install Dependencies
-Run the install command in your terminal:
-```bash
-npm install
+The system is built with a **modular, decoupled architecture** using **functional programming** practices:
+
+- **Dynamic System Prompt**: Built dynamically based on the active skills and current user session verification context.
+- **Skills & Tools Registry**: Modularity is achieved via the `SkillsRegistry`. Each skill package (e.g. `atlassian`, `memory`, `artifacts`, `system`) exports its own tools and prompt additions, registering itself to the agent runtime.
+- **Reasoning Loop**: The agent performs a multi-step reasoning loop (up to 5 steps) to resolve complex, nested tool calls.
+
+> [!TIP]
+> For a detailed look at the folders, sequence diagrams, and flow charts, refer to the [Detailed Project Architecture & Structure](docs/STRUCTURE.md).
+
+---
+
+## 📂 Project Structure
+
+```
+.
+├── assets/                  # Images and media assets
+├── docs/                    # Detailed architectural documents
+│   └── STRUCTURE.md         # Full structure and sequence diagrams
+├── src/
+│   ├── cli/                 # Command line chat interface
+│   ├── controllers/         # Web HTTP request controllers
+│   ├── core/                # Core Agent runtime (reasoning loop, session, registry)
+│   ├── services/            # Client connectors (Atlassian, Zalo, Memory)
+│   ├── skills/              # Domain-specific modules (atlassian, artifacts, memory, system)
+│   ├── utils/               # Formatting, env, and helpers
+│   ├── server.ts            # Express server entry point
+│   └── index.ts             # CLI Mode entry point
+└── Dockerfile               # Production containerization
 ```
 
-### 2. Configure Environment Keys
-Create a `.env` file from the example and fill in your VNG Cloud AI Platform API key:
+---
+
+## 🚀 Setup & Execution Guide
+
+### 1. Pre-requisites & Installation
+Ensure you have **Node.js (v20+)** and **pnpm** installed.
+Clone the repository, then install dependencies:
+```bash
+pnpm install
+```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory (using `.env.example` as a template):
 ```env
 AI_PLATFORM_API_KEY="your_api_key_here"
 AI_PLATFORM_BASE_URL="https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1"
-```
-*Note: Valid keys are required to execute calls successfully.*
 
-### 3. Run in CLI Terminal Mode
-Start the interactive chat interface in your terminal:
-```bash
-npm start
+ATLASSIAN_DOMAIN="your-company.atlassian.net"
+ATLASSIAN_EMAIL="your-atlassian-email@company.com"
+ATLASSIAN_API_TOKEN="your_atlassian_api_token"
+
+ZALO_BOT_TOKEN="your_zalo_bot_token_here"
+ZALO_BOT_POLLING="true" # Set to true to test locally using polling
 ```
 
-### 4. Run as API Web Server
-Start the Express API server:
+### 3. Run the Agent in Interactive CLI Mode
+Test the agent's behavior directly in your terminal:
 ```bash
-npm run server
+pnpm start
 ```
-The server runs on `http://localhost:3000`. You can interact with:
-- `GET http://localhost:3000/health`: System health check.
-- `POST http://localhost:3000/api/chat` (Body: `{ "message": "your query" }`): Interact with the agent.
 
-### 5. Run Automated Tests
-Execute types verification and unit tests:
+### 4. Run the Express HTTP Server
+Start the production-ready HTTP server on port 3000 (or the port defined by your environment):
 ```bash
-npm test
+pnpm run server
 ```
+The server exposes the following endpoints:
+- `GET /health` - Health Check.
+- `POST /api/chat` - Chat Endpoint (Body: `{"message": "user text", "sessionId": "optional_id"}`).
+- `GET /api/history` - Retrieve Chat Session History.
+- `POST /api/clear` - Reset Chat Session Memory.
+- `POST /webhook/zalo` - Webhook Endpoint for Zalo Server notifications.
 
 ---
 
-## 💡 How to Add Custom Tools
+## 🧪 Verification & Testing
 
-1. Create your tool definition in a domain-specific file under [`src/tools/`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/) (e.g., `src/tools/weather.ts`):
-```typescript
-import { ToolDefinition } from "../core/types";
+The codebase includes an extensive testing and verification suite to ensure agent focus, proper routing, and authentication:
 
-export const getWeather: ToolDefinition = {
-  name: "getWeather",
-  description: "Get the current weather conditions for a location.",
-  input_schema: {
-    type: "object",
-    properties: {
-      location: { type: "string", description: "City name, e.g. Tokyo" }
-    },
-    required: ["location"]
-  },
-  execute: async ({ location }) => {
-    // Implement real API call or mock data return
-    return { location, condition: "Sunny", temperature: "25°C" };
-  }
-};
+### 1. Automated Functional & Unit Tests
+Verifies correct model client setup, Markdown table-to-text converters, Session Manager state, and Atlassian tool mock behaviors.
+```bash
+pnpm test
 ```
 
-2. Register the tool in [`src/tools/index.ts`](file:///Users/duongductrong/Developer/zlp/claw26-team210/src/tools/index.ts) by importing it and adding it to the `agentTools` array:
-```typescript
-import { getWeather } from "./weather";
-
-export const agentTools: ToolDefinition[] = [
-  // ... existing tools
-  getWeather
-];
+### 2. End-to-End Persona Focus & Flow Verification
+Runs a multi-step conversation testing security checks, directory lookups, access validation, out-of-scope blocking, and natural wiki queries:
+```bash
+npx tsx src/verify_agent_focus.ts
 ```
