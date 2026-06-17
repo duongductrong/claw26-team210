@@ -103,7 +103,7 @@ sequenceDiagram
     User->>Agent: "Get contents of Training Page"
     Agent->>Conf: Fetch Page (Page 131192)
     Conf-->>Agent: Page HTML containing permission metadata
-    Agent->>Agent: Check if user.id is in page-level whitelist
+    Agent->>Agent: Check if user.accessLevel or user.id is in page-level whitelist
     alt Not Authorized
         Agent-->>User: "Access Denied: You are not authorized"
     else Authorized

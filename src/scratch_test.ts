@@ -482,7 +482,7 @@ async function runTests() {
           title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
           body: {
             storage: {
-              value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+              value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Admin, Developer, Restricted</div>",
               representation: "storage"
             }
           }
@@ -498,7 +498,7 @@ async function runTests() {
           title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
           body: {
             storage: {
-              value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+              value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Developer</div>",
               representation: "storage"
             }
           }
@@ -516,7 +516,7 @@ async function runTests() {
               title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
               body: {
                 storage: {
-                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Admin, Developer, Restricted</div>",
                   representation: "storage"
                 }
               }
@@ -526,7 +526,7 @@ async function runTests() {
               title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
               body: {
                 storage: {
-                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Developer</div>",
                   representation: "storage"
                 }
               }
@@ -546,7 +546,7 @@ async function runTests() {
               title: "💻 2. Tài khoản & Thiết bị (Accounts & Devices)",
               body: {
                 storage: {
-                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001, EMP100</div>",
+                  value: "<h1>Equipment Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Admin, Developer, Restricted</div>",
                   representation: "storage"
                 }
               }
@@ -556,7 +556,7 @@ async function runTests() {
               title: "🎓 5. Đào tạo & Phát triển (Training & Development)",
               body: {
                 storage: {
-                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> EMP001</div>",
+                  value: "<h1>Training Guide</h1><hr /><div class=\"document-permissions\"><strong>Quyền truy cập tài liệu:</strong> Developer</div>",
                   representation: "storage"
                 }
               }

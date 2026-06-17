@@ -31,6 +31,24 @@ The agent is powered by the `qwen/qwen3-5-27b` model on the **VNG Cloud MaaS AI 
 
 ---
 
+## 👥 Demo Personnel Directory for Testing
+
+To test the **Zero-Trust Employee Verification** flow, you can use the following mock credentials from the company directory:
+
+| Employee ID | Full Name | Age | Department | Role | Access Level | Test Case / Scenario |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **EMP001** | Nguyen Van A | 30 | Software Development | Senior Engineer | **Admin** | High-level developer with full document & ticket access. |
+| **EMP002** | Tran Thi B | 25 | HR | HR Specialist | **User** | HR specialist responsible for collecting physical onboarding documents. |
+| **EMP003** | Le Van C | 28 | Finance | Accountant | **User** | Finance department user with standard read access. |
+| **EMP004** | Pham Van D | 35 | Security | Security Lead | **Restricted** | Restricted access level. Cannot view sensitive HR or Finance files. |
+| **EMP100** | Duong Duc Trong | 24 | Product | Product Manager | **Admin** | PM role with access to Portal-Gateway and ClawMonitor. |
+| **EMP101** | Khoa Pham Nguyen Minh | 21 | Product | Software Engineer | **Developer** | Developer role with access to Training & Development. |
+
+> [!NOTE]
+> When testing, first greet the agent (e.g., *"Chào bạn, mình là nhân viên mới"*). The agent will ask for your **Name** and **Employee ID**. Respond with one of the pairs above (e.g., *"Mình tên là Duong Duc Trong, mã nhân viên EMP100"*) to log in.
+
+---
+
 ## 🏗️ Architecture Overview
 
 The system is built with a **modular, decoupled architecture** using **functional programming** practices:

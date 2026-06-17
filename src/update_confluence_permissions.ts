@@ -4,15 +4,15 @@ dotenv.config();
 import { callConfluenceCloudAPI } from "./services/atlassian";
 
 const PERMISSIONS_MAPPING: Record<string, string[]> = {
-  "65888": ["EMP001", "EMP002", "EMP003", "EMP004", "EMP100"], // 3. Kiến thức & Văn hoá (All)
-  "98731": ["EMP001", "EMP002", "EMP100"],                     // Onboarding Agent - Tổng quan hệ thống
-  "131116": ["EMP001", "EMP002", "EMP100"],                    // 1. Hành chính & Pháp lý
-  "131146": ["EMP001", "EMP004", "EMP100"],                    // 2. Tài khoản & Thiết bị
-  "131168": ["EMP001", "EMP002", "EMP100"],                    // 4. Kết nối con người
-  "131192": ["EMP001"],                             // 5. Đào tạo & Phát triển
-  "131214": ["EMP001", "EMP002", "EMP100"],                    // 6. Theo dõi & Phản hồi
-  "98680": ["EMP001", "EMP100"],                              // Claw26-Team210 homepage
-  "131319": ["EMP001", "EMP100"]                              // Employee Directory (Admins only)
+  "65888": ["Admin", "Developer", "User", "Restricted"], // 3. Kiến thức & Văn hoá (All)
+  "98731": ["Admin", "Developer", "User"],                     // Onboarding Agent - Tổng quan hệ thống
+  "131116": ["Admin", "Developer", "User"],                    // 1. Hành chính & Pháp lý
+  "131146": ["Admin", "Developer", "Restricted"],              // 2. Tài khoản & Thiết bị
+  "131168": ["Admin", "Developer", "User"],                    // 4. Kết nối con người
+  "131192": ["Developer"],                            // 5. Đào tạo & Phát triển
+  "131214": ["Admin", "Developer", "User"],                    // 6. Theo dõi & Phản hồi
+  "98680": ["Admin", "Developer"],                             // Claw26-Team210 homepage
+  "131319": ["Admin"]                                          // Employee Directory (Admins only)
 };
 
 async function updatePagePermissions(pageId: string, allowedIds: string[]) {

@@ -27,11 +27,11 @@ function parseEmployeeTable(html: string) {
     accessLevel: string;
   }> = [];
 
-  const trRegex = /<tr>([\s\S]*?)<\/tr>/gi;
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let trMatch;
   while ((trMatch = trRegex.exec(html)) !== null) {
     const rowContent = trMatch[1];
-    const tdRegex = /<td>([\s\S]*?)<\/td>/gi;
+    const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
     const tds: string[] = [];
     let tdMatch;
     while ((tdMatch = tdRegex.exec(rowContent)) !== null) {
@@ -174,9 +174,14 @@ function verifyPageAccess(pageBody: string, user: any, pageTitle: string): void 
   }
   const match = pageBody.match(/Quyền truy cập tài liệu:<\/strong>\s*([^<]+)/i);
   if (match) {
-    const allowedIds = match[1].split(",").map(id => id.trim().toUpperCase());
-    if (!allowedIds.includes(user.id.toUpperCase())) {
-      throw new Error(`Access Denied: Tài khoản của bạn (${user.id}) không có quyền truy cập tài liệu này "${pageTitle}". Tài liệu này chỉ dành cho: ${allowedIds.join(", ")}.`);
+    const allowedTargets = match[1].split(",").map(item => item.trim().toUpperCase());
+    const userLevel = user.accessLevel ? user.accessLevel.trim().toUpperCase() : "";
+    const userId = user.id ? user.id.trim().toUpperCase() : "";
+    
+    const isAuthorized = allowedTargets.includes(userLevel) || allowedTargets.includes(userId);
+    
+    if (!isAuthorized) {
+      throw new Error(`Access Denied: Tài khoản của bạn (${user.id || "không xác định"}) với vai trò '${user.accessLevel || "không xác định"}' không có quyền truy cập tài liệu này "${pageTitle}". Tài liệu này chỉ dành cho: ${match[1].trim()}.`);
     }
   }
 }
